@@ -25,6 +25,8 @@ int main(int argc, char *argv[]){
 
   /* Do magic */
   int port=atoi(Destport);
+  
+  //test
 #ifdef DEBUG 
   printf("Host %s, and port %d.\n",Desthost,port);
 #endif
