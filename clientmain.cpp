@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #define SA struct sockaddr
 /* You will to add includes here */
 
@@ -16,10 +17,6 @@
 
 int main(int argc, char *argv[]){
 
-  /*
-    Read first input, assumes <ip>:<port> syntax, convert into one string (Desthost) and one integer (port). 
-     Atm, works only on dotted notation, i.e. IPv4 and DNS. IPv6 does not work if its using ':'. 
-  */
   char delim[]=":";
   char *Desthost=strtok(argv[1],delim);
   char *Destport=strtok(NULL,delim);
@@ -32,31 +29,42 @@ int main(int argc, char *argv[]){
   
   //Create TCP socket
   int socket_desc;
+  struct sockaddr_in server_addr;
+  
   socket_desc = socket(AF_INET, SOCK_STREAM, 0);
-  if(socket_desc == -1){
-  	printf("socket creation failed...\n");
-  	exit(0);
+  
+  if(socket_desc < 0){
+  	#ifdef DEBUG
+  	printf("Unable to create socket\n");
+  	#endif
+  	return -1;
   }
-  else
-  	printf("socket creation succeeded...\n");
+  #ifdef DEBUG
+  else printf("Socket Created\n");
+  #endif
   
-  printf("starting server connection");
-  bzero(&servaddr, sizeof(servaddr));
-  
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = inet_addr(Desthost);
-  servaddr.sin_port = 5000;
-  
-  if(connect(socket_desc, (SA*)&servaddr, sizeof(servaddr)) != 0) {
-  	printf("connection with the server failed...\n");
-  	exit(0);
-  }
-  else
-  	printf("connected to server...\n");	
   
 #ifdef DEBUG 
-  printf("Host %s, and port %d.\n",Desthost,port);
+  printf("Host %s, and Port %d.\n",Desthost,port);
 #endif
 
+
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(port);
+  server_addr.sin_addr.s_addr = inet_addr(Desthost);
+  
+  int error;
+  error = connect(socket_desc, (struct sockaddr*)&server_addr, sizeof(server_addr));
+  if(error < 0){
+  	#ifdef DEBUG
+  	printf("Unable to connect\n");
+  	printf("Error: %d \n", errno);
+  	#endif
+  	return -1;
+  }
+  #ifdef DEBUG
+  else printf("Connected\n");
+  #endif
+  
   
 }
