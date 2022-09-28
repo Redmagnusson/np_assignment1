@@ -21,6 +21,7 @@ int main(int argc, char *argv[]){
   char *Desthost=strtok(argv[1],delim);
   char *Destport=strtok(NULL,delim);
   struct sockaddr_in servaddr;
+  char server_message[2000], client_message[2000];
   // *Desthost now points to a sting holding whatever came before the delimiter, ':'.
   // *Dstport points to whatever string came after the delimiter. 
 
@@ -66,5 +67,18 @@ int main(int argc, char *argv[]){
   else printf("Connected\n");
   #endif
   
+  if(recv(socket_desc, server_message, sizeof(server_message), 0) < 0){
+  	#ifdef DEBUG
+  	printf("Error receiving message\n");
+  	#endif
+  	return -1;
+  }
+  else printf(server_message);
   
+  if(strcmp(server_message,"TEXT TCP 1.0\n\n") == 0){
+  	#ifdef DEBUG
+  	printf("Same\n");
+  	#endif
+  }
+  //else return -1;
 }
