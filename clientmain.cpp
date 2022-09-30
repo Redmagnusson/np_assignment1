@@ -9,7 +9,7 @@
 
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass CFLAGS=-DDEBUG to make, make CFLAGS=-DDEBUG
-#define DEBUG
+//#define DEBUG
 
 
 // Included to get the support library
@@ -40,10 +40,9 @@ void sendMessage(int &socket_desc, char* client_message, unsigned int msg_size){
   	exit(-1);
   }
   else printf(client_message);
-  
-  memset(client_message, 0, msg_size);
+ 
 }
-void calculateMessage(char* server_message, char* client_message){
+void calculateMessage(char* server_message, int &socket_desc){
 	int i1, i2, iresult;
 	float f1, f2, fresult;
 	char* operation, *grab1, *grab2, *temp1, *temp2;
@@ -52,9 +51,6 @@ void calculateMessage(char* server_message, char* client_message){
 		operation = strtok(server_message, " ");
 		grab1 = strtok(NULL, " ");
 		grab2 = strtok(NULL, "\\");
-		#ifdef DEBUG
-		printf("%s %s %s", operation, grab1, grab2);
-		#endif
 		f1 = atof(grab1); 
 		f2 = atof(grab2);
 		
@@ -67,11 +63,10 @@ void calculateMessage(char* server_message, char* client_message){
 		} else if(strcmp(operation, "fdiv") == 0){
 			fresult = f1/f2;
 		}
-
-
-		sprintf(temp1, "%8.8g", fresult);
-		strcpy(client_message, temp1);
-		strcat(client_message, "\n");
+		
+		char* str;
+		sprintf(str, "%8.8g\n", fresult);
+		sendMessage(socket_desc, str, strlen(str));
 		return;
 		
 	} else {
@@ -79,9 +74,6 @@ void calculateMessage(char* server_message, char* client_message){
 	  operation = strtok(server_message, " ");
 		grab1 = strtok(NULL, " ");
 		grab2 = strtok(NULL, "\\");
-		#ifdef DEBUG
-		printf("%s %s %s", operation, grab1, grab2);
-		#endif
 		i1 = atoi(grab1); 
 		i2 = atoi(grab2);
 		
@@ -92,14 +84,12 @@ void calculateMessage(char* server_message, char* client_message){
 		} else if(strcmp(operation, "mul") == 0){
 			iresult = i1*i2;
 		} else if(strcmp(operation, "div") == 0){
+		//Make result into string then add \n
 			iresult = i1/i2;
 		}
-		#ifdef DEBUG
-		printf("Result: %s", client_message);
-		#endif
-		sprintf(client_message, "%d", iresult);
-		strncat(client_message, "\n", 2);
-
+		char* strResult;
+		sprintf(strResult, "%d\n", iresult);
+		sendMessage(socket_desc, strResult, strlen(strResult));
 		return;
 	}
 
@@ -163,23 +153,20 @@ int main(int argc, char *argv[]){
   	printf("Same\n");
   	#endif DEBUG
   	char* str = "OK\n";
-  	strcpy(client_message, str);
+  	//strcpy(client_message, str);
+  	//Send back the OK
+  	sendMessage(socket_desc, str, strlen(str));
   }
   else return -1;
 
-  //Send back the OK
-  sendMessage(socket_desc, client_message, sizeof(client_message));
-  
   //Recieve the problem
   recieveMessage(socket_desc, server_message, sizeof(server_message));
   
   //Translate Message
-  memset(client_message, 0, sizeof(client_message));
-  calculateMessage(server_message, client_message);
-  printf(client_message);
-	
+  calculateMessage(server_message, socket_desc);
+  
   //Send answer to server
-  sendMessage(socket_desc, client_message, sizeof(client_message));
+  //sendMessage(socket_desc, client_message, sizeof(client_message));
   
   //Recieve the final Message
   recieveMessage(socket_desc, server_message, sizeof(server_message));
