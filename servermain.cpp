@@ -22,7 +22,7 @@ void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_siz
 
   //Clears the message array before recieving the server msg.
   //Because for some reason the function doesnt do it by itself
-  memset(server_message, 0, msg_size);
+  memset(server_message, 0, 2000);
   if(recv(socket_desc, server_message, msg_size, 0) < 0){
   	#ifdef DEBUG
   	printf("Error receiving message\n");
@@ -31,6 +31,7 @@ void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_siz
   }
   else 
     printf(server_message);
+   
 } 
 char* calculateMessage(char* server_message){
 	int i1, i2, iresult;
@@ -95,6 +96,7 @@ int main(int argc, char *argv[]){
   char *Desthost=strtok(argv[1],delim);
   char *Destport=strtok(NULL,delim);
   char server_message[2000], client_message[2000];
+  memset(client_message, 0, 2000);
   int sockfd, connfd, len;
   struct sockaddr_in servaddr, client;
   double fv1, fv2, fresult;
@@ -138,6 +140,8 @@ int main(int argc, char *argv[]){
 	else printf("Listening...\n");
 	
 	while(true){
+	
+	printf("\n\n\n\nNEW SOCKET CONNECTING\n");
 	//Accept connection, then send protocol msg
 	connfd = accept(sockfd, (struct sockaddr*)&client, (socklen_t*)&len);
 	
@@ -182,7 +186,7 @@ int main(int argc, char *argv[]){
 		sprintf(msg, "%s %d %d\n", op, iv1, iv2);
 	}
 	if(send(connfd, msg, strlen(msg), 0) < 0){
-			printf("Could not send protocol msg\n");
+			printf("Could not send problem msg\n");
 			//exit(-1);
 	} else printf("Sent problem msg\n");
 	
@@ -190,8 +194,27 @@ int main(int argc, char *argv[]){
 	recieveMessage(connfd, client_message, sizeof(client_message));
 	
 	//Compare solutions
-	char* solution;
-	solution = calculateMessage(client_message);
-	//Send final message
+	if(strlen(client_message) > 0){
+		char* solution;
+		printf("MSG: %s\n, Size: %d", client_message, strlen(client_message));
+		solution = calculateMessage(client_message);
+		//Send final message
+		if(strcmp(client_message, solution)){
+				printf("Test1\n");
+			char* str = "OK\n";
+			if(send(connfd, str, strlen(str), 0) < 0){
+				printf("Could not send final answer\n");
+				//exit(-1);
+			} else printf("Sent final msg\n");
+		}
+		else{
+				printf("Test2\n");
+			char* str = "ERROR\n";
+			if(send(connfd, str, strlen(str), 0) < 0){
+				printf("Could not send final answer\n");
+				//exit(-1);
+			} else printf("Sent final msg\n");
+		}
+	}
 	}
 }
