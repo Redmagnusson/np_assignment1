@@ -11,7 +11,7 @@
 #define SA struct sockaddr
 /* You will to add includes here */
 #include <unistd.h>
-
+#include <math.h>
 // Included to get the support library
 #include <calcLib.h>
 
@@ -33,58 +33,6 @@ void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_siz
     printf(server_message);
    
 } 
-char* calculateMessage(char* server_message){
-	int i1, i2, iresult;
-	float f1, f2, fresult;
-	char* operation, *grab1, *grab2, *temp1, *temp2;
-	
-	if(server_message[0] == 'f'){
-		operation = strtok(server_message, " ");
-		grab1 = strtok(NULL, " ");
-		grab2 = strtok(NULL, "\\");
-		f1 = atof(grab1); 
-		f2 = atof(grab2);
-		
-		printf("Recieved: %s %8.8d %8.8d\n", operation, f1, f2);
-		if(strcmp(operation, "fadd") == 0){
-			fresult = f1+f2;
-		} else if(strcmp(operation, "fsub") == 0){
-			fresult = f1-f2;
-		} else if(strcmp(operation, "fmul") == 0){
-			fresult = f1*f2;
-		} else if(strcmp(operation, "fdiv") == 0){
-			fresult = f1/f2;
-		}
-		
-		char* str = (char*)malloc(1450);
-		sprintf(str, "%8.8g\n", fresult);
-		return str;
-		
-	} else {
-	
-	  operation = strtok(server_message, " ");
-		grab1 = strtok(NULL, " ");
-		grab2 = strtok(NULL, "\\");
-		i1 = atoi(grab1); 
-		i2 = atoi(grab2);
-		
-		if(strcmp(operation, "add") == 0){
-			iresult = i1+i2;
-		} else if(strcmp(operation, "sub") == 0){
-			iresult = i1-i2;
-		} else if(strcmp(operation, "mul") == 0){
-			iresult = i1*i2;
-		} else if(strcmp(operation, "div") == 0){
-		//Make result into string then add \n
-			iresult = i1/i2;
-		}
-		char* str = (char*)malloc(1450);
-		sprintf(str, "%d\n", iresult);
-		return str;
-	}
-
-
-}
 using namespace std;
 int main(int argc, char *argv[]){
   
@@ -102,6 +50,7 @@ int main(int argc, char *argv[]){
   double fv1, fv2, fresult;
   int iv1, iv2, iresult;
   char msg[1450];
+  int readSize;
   // *Desthost now points to a sting holding whatever came before the delimiter, ':'.
   // *Dstport points to whatever string came after the delimiter. 
 	
@@ -135,7 +84,7 @@ int main(int argc, char *argv[]){
 	//TODO 5 QUEUED CLIENTS
 	if((listen(sockfd, 5)) != 0){
 		printf("Failed to listen. Exiting...\n");
-		exit(-1);
+		//exit(-1);
 	}
 	else printf("Listening...\n");
 	
@@ -146,7 +95,8 @@ int main(int argc, char *argv[]){
 	connfd = accept(sockfd, (struct sockaddr*)&client, (socklen_t*)&len);
 	
 	if(connfd < 0){
-		printf("Server accept failed. Exiting...\n");
+		printf("Server accept failed. Closing...\n");
+		close(connfd);
 		//exit(-1);
 	}
 	else {
@@ -154,67 +104,142 @@ int main(int argc, char *argv[]){
 		char* str = "TEXT TCP 1.0\n\n";
 		if(send(connfd, str, strlen(str), 0) < 0){
 			printf("Could not send protocol msg\n");
-			//exit(-1);
+			close(connfd);
 		} else printf("Sent protocol msg\n");
 	}
 	
 	//Recv the OK from client
-	recieveMessage(connfd, client_message, sizeof(client_message));
-	
+	//recieveMessage(connfd, client_message, sizeof(client_message));
+
+	readSize = recv(connfd, &client_message, sizeof(client_message), 0);
+	if(readSize == 0){
+		printf("Connection with socket died.\n");
+		close(connfd);
+		continue;
+	}
+	client_message[readSize] = 0;
 	//Compare strings to verify version
-  if(strcmp(client_message,"OK\n") == 0){
-  	#ifdef DEBUG
-  	printf("Same\n");
-  	#endif DEBUG
-  	char* str = "OK\n";
-  }
-  //else return -1;
+  	if(strcmp(client_message,"OK\n") == 0){
+  		#ifdef DEBUG
+  		printf("Same\n");
+  		#endif DEBUG
+  	}
+  	else{
+  		printf("Wrong response. Closing connection...");
+  		close(connfd);
+  		continue;
+  	}
 	
 	
-	//Send problem
-	char* op = randomType();
-	memset(msg, sizeof(msg), 0);
-	
-	if(op[0] == 'f'){
+	//Calculate problem
+	char* op = (char*)malloc(1450);
+	op = randomType();
+	printf("Got randomtype: %s\n", op);
+	char* solution = (char*)malloc(1450);
+	if(strcmp("fadd", op) == 0){
 		fv1 = randomFloat();
 		fv2 = randomFloat();
+		fresult = fv1 + fv2;
 		sprintf(msg, "%s %8.8g %8.8g\n", op, fv1, fv2);
+		sprintf(solution, "%8.8g\n", fresult);
 	}
-	else{
+	else if(strcmp("fsub", op) == 0){
+		printf("test\n");
+		fv1 = randomFloat();
+		fv2 = randomFloat();
+		fresult = fv1 - fv2;
+		sprintf(msg, "%s %8.8g %8.8g\n", op, fv1, fv2);
+		printf("sprintf worked\n");
+		sprintf(solution, "%8.8g\n", fresult);
+
+	}
+	else if(strcmp("fmul", op) == 0){
+		printf("test\n");
+		fv1 = randomFloat();
+		fv2 = randomFloat();
+		fresult = fv1 * fv2;
+		sprintf(msg, "%s %8.8g %8.8g\n", op, fv1, fv2);
+		sprintf(solution, "%8.8g\n", fresult);
+	}
+	else if(strcmp("fdiv", op) == 0){
+		printf("test\n");
+		fv1 = randomFloat();
+		fv2 = randomFloat();
+		fresult = fv1 / fv2;
+		sprintf(msg, "%s %8.8g %8.8g\n", op, fv1, fv2);
+		sprintf(solution, "%8.8g\n", fresult);
+	}
+	else if(strcmp("add", op) == 0){
 		iv1 = randomInt();
 		iv2 = randomInt();
+		iresult = iv1 + iv2;
 		sprintf(msg, "%s %d %d\n", op, iv1, iv2);
+		sprintf(solution, "%d\n", iresult);
 	}
+	else if(strcmp("sub", op) == 0){
+		iv1 = randomInt();
+		iv2 = randomInt();
+		iresult = iv1 - iv2;
+		sprintf(msg, "%s %d %d\n", op, iv1, iv2);
+		sprintf(solution, "%d\n", iresult);
+	}
+	else if(strcmp("mul", op) == 0){
+		iv1 = randomInt();
+		iv2 = randomInt();
+		iresult = iv1 * iv2;
+		sprintf(msg, "%s %d %d\n", op, iv1, iv2);
+		sprintf(solution, "%d\n", iresult);
+	}
+	else if(strcmp("div", op) == 0){
+		iv1 = randomInt();
+		iv2 = randomInt();
+		iresult = iv1 / iv2;
+		sprintf(msg, "%s %d %d\n", op, iv1, iv2);
+		sprintf(solution, "%d\n", iresult);
+	}
+	printf("Problem made: %s\n", msg);
+	printf("Solution made: %s\n", solution);
+	//Send problem
 	if(send(connfd, msg, strlen(msg), 0) < 0){
 			printf("Could not send problem msg\n");
-			//exit(-1);
-	} else printf("Sent problem msg\n");
-	
+			close(connfd);
+			continue;
+	}else printf("Problem sent\n");
+
 	//Recieve solution
-	recieveMessage(connfd, client_message, sizeof(client_message));
+	readSize = recv(connfd, &client_message, sizeof(client_message), 0);
+	if(readSize == 0){
+		printf("Connection with socket died.\n");
+		close(connfd);
+		continue;
+	}
+	client_message[readSize] = 0;
 	
 	//Compare solutions
-	if(strlen(client_message) > 0){
-		char* solution;
-		printf("MSG: %s\n, Size: %d", client_message, strlen(client_message));
-		solution = calculateMessage(client_message);
-		//Send final message
-		if(strcmp(client_message, solution)){
-				printf("Test1\n");
-			char* str = "OK\n";
-			if(send(connfd, str, strlen(str), 0) < 0){
-				printf("Could not send final answer\n");
-				//exit(-1);
-			} else printf("Sent final msg\n");
+	printf("Answer: %s\n Solution:%s\n", client_message, solution);
+	if(op[0] == 'f'){
+		double x = fabs(atof(client_message) - atof(solution));
+		if(x < 0.0001){
+			solution = "OK\n";
 		}
-		else{
-				printf("Test2\n");
-			char* str = "ERROR\n";
-			if(send(connfd, str, strlen(str), 0) < 0){
-				printf("Could not send final answer\n");
-				//exit(-1);
-			} else printf("Sent final msg\n");
-		}
+		else solution = "ERROR\n";
 	}
+	else if(strcmp(client_message, solution) == 0){
+		solution = "OK\n";
+	}else{
+		solution = "ERROR\n";
 	}
+	
+	//Send final response
+	if(send(connfd, solution, strlen(solution), 0) < 0){
+		printf("Could not send final response msg\n");
+		close(connfd);
+		continue;
+	}else printf("Final response sent: %s\n", solution);
+	//Close connection
+	close(connfd);
+	
+	}//This is the while loop, dont touch
+	
+	close(sockfd);
 }

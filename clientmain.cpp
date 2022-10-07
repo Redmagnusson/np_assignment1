@@ -9,7 +9,7 @@
 
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass CFLAGS=-DDEBUG to make, make CFLAGS=-DDEBUG
-//#define DEBUG
+#define DEBUG
 
 
 // Included to get the support library
@@ -64,8 +64,9 @@ void calculateMessage(char* server_message, int &socket_desc){
 			fresult = f1/f2;
 		}
 		
-		char* str;
+		char* str = (char*)malloc(1450);
 		sprintf(str, "%8.8g\n", fresult);
+		printf("This is the message thats failing: %s\n", str);
 		sendMessage(socket_desc, str, strlen(str));
 		return;
 		
@@ -87,8 +88,9 @@ void calculateMessage(char* server_message, int &socket_desc){
 		//Make result into string then add \n
 			iresult = i1/i2;
 		}
-		char* strResult;
+		char* strResult = (char*)malloc(1450);
 		sprintf(strResult, "%d\n", iresult);
+		printf("This is the message thats failing\n");
 		sendMessage(socket_desc, strResult, strlen(strResult));
 		return;
 	}
