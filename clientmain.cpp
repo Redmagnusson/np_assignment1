@@ -135,12 +135,12 @@ int main(int argc, char *argv[]){
 	if(getaddrinfo(Desthost, Destport, &hints, &serverinfo) < 0){
 		printf("Getaddrinfo error: %s\n", strerror(errno)); 
 		exit(0);
-	} else printf("Getaddrinfo success\n");
+	} //else printf("Getaddrinfo success\n");
   
   //Create TCP socket
   int socket_desc;
   struct sockaddr_in server_addr;
-  socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+  socket_desc = socket(serverinfo->ai_family, serverinfo->ai_socktype, serverinfo->ai_protocol);
   
   if(socket_desc < 0){
   	#ifdef DEBUG
@@ -164,7 +164,7 @@ int main(int argc, char *argv[]){
   int error;
   
   //Establish Connection
-  error = connect(socket_desc, (struct sockaddr*)&server_addr, sizeof(server_addr));
+  error = connect(socket_desc, serverinfo->ai_addr, serverinfo->ai_addrlen);
   if(error < 0){
   	#ifdef DEBUG
   	printf("Unable to connect\n");

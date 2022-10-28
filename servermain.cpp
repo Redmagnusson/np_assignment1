@@ -12,12 +12,13 @@
 /* You will to add includes here */
 #include <unistd.h>
 #include <math.h>
+#include <errno.h>
 // Included to get the support library
 #include <calcLib.h>
-
+#define DEBUG
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass CFLAGS=-DDEBUG to make, make CFLAGS=-DDEBUG
-#define DEBUG
+//#define DEBUG
 void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_size){
 
   //Clears the message array before recieving the server msg.
@@ -33,87 +34,145 @@ void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_siz
     printf(server_message);
    
 } 
+
 using namespace std;
+int CAP = 2000;
 int main(int argc, char *argv[]){
-  
-  /*
-    Read first input, assumes <ip>:<port> syntax, convert into one string (Desthost) and one integer (port). 
-     Atm, works only on dotted notation, i.e. IPv4 and DNS. IPv6 does not work if its using ':'. 
-  */
-  char delim[]=":";
-  char *Desthost=strtok(argv[1],delim);
-  char *Destport=strtok(NULL,delim);
-  char server_message[2000], client_message[2000];
-  memset(client_message, 0, 2000);
-  int sockfd, connfd, len;
-  struct sockaddr_in servaddr, client;
-  double fv1, fv2, fresult;
-  int iv1, iv2, iresult;
-  char msg[1450];
-  int readSize;
-  // *Desthost now points to a sting holding whatever came before the delimiter, ':'.
-  // *Dstport points to whatever string came after the delimiter. 
+  //Variables
+	char* splits[CAP];
+  char* p = strtok(argv[1], ":");
+  int delimCounter = 0;
+  char *Desthost;
+  char *Destport;
+  int port;
+	int sockfd;
+	int connfd;
+	struct sockaddr_in client;
+	char server_message[CAP];
+	char client_message[CAP];
+	char msg[CAP];
+	int len = 0;
+	float fv1, fv2, fresult;
+	int iv1, iv2, iresult;
+	int readSize;
 	
-  /* Do magic */
-  int port=atoi(Destport);
-  #ifdef DEBUG  
-  printf("Host %s, and port %d.\n",Desthost,port);
-#endif
+  //Get argv
+  while(p != NULL){
+  	//Look for the amount of ":" in argv to determine if ipv4 or ipv6
+  	splits[delimCounter++] = p;
+  	p = strtok(NULL, ":");
+  }
+  Destport = splits[--delimCounter];
+  Desthost = splits[0];
+  for(int i = 1;i<delimCounter;i++){
+  	
+  	sprintf(Desthost, "%s:%s",Desthost, splits[i]);
+  }
+  port=atoi(Destport);
+  printf("Host %s and port %d.\n",Desthost,port);
+	
+	//Getaddrinfo
+	struct addrinfo hints, *serverinfo = 0;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	
+	if(getaddrinfo(Desthost, Destport, &hints, &serverinfo) < 0){
+		printf("Getaddrinfo error: %s\n", strerror(errno)); 
+		exit(0);
+	} else printf("Getaddrinfo success\n");
 
 	//Create socket
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  sockfd = socket(serverinfo->ai_family, serverinfo->ai_socktype, serverinfo->ai_protocol);
   if(sockfd == -1){
+  	#ifdef DEBUG
   	printf("Socket Creation Failed. Exiting...\n");
+  	#endif
   	exit(-1);
   }
-  else printf("Socket created successfully\n");
+  else{
+  	#ifdef DEBUG
+  	printf("Socket created successfully\n");
+  	#endif
+  }
   
-  servaddr.sin_family = AF_INET;
-  servaddr.sin_addr.s_addr = inet_addr(Desthost);
-  servaddr.sin_port = htons(port);
+  //Set socket option for timeout
+  struct timeval tv = {
+  	.tv_sec = 5
+  };
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   
   //Bind socket
-  if((bind(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr))) != 0){
+  if((bind(sockfd, serverinfo->ai_addr, serverinfo->ai_addrlen)) < 0){
+  	#ifdef DEBUG
   	printf("Socket bind failed. Exiting...\n");
+  	#endif
   	exit(-1);
   }
-  else printf("Socket successfully bound\n");
+  else {
+  	#ifdef DEBUG
+  	printf("Socket successfully bound\n");
+  	#endif
+  }
 
 	
 	//Listen for connections
 	//TODO 5 QUEUED CLIENTS
 	if((listen(sockfd, 5)) != 0){
+		#ifdef DEBUG
 		printf("Failed to listen. Exiting...\n");
-		//exit(-1);
+		#endif
+		exit(-1);
 	}
-	else printf("Listening...\n");
-	
+	else {
+		#ifdef DEBUG
+		printf("Listening...\n");
+		#endif
+	}
 	while(true){
 	
-	printf("\n\n\n\nNEW SOCKET CONNECTING\n");
+	//printf("\n\n\n\nNEW SOCKET CONNECTING\n");
 	//Accept connection, then send protocol msg
 	connfd = accept(sockfd, (struct sockaddr*)&client, (socklen_t*)&len);
 	
 	if(connfd < 0){
-		printf("Server accept failed. Closing...\n");
+		#ifdef DEBUG
+		printf("Server accept failed. Closing connection.\n");
+		#endif
 		close(connfd);
-		//exit(-1);
 	}
 	else {
+		#ifdef DEBUG
 		printf("Server accepted client.\n");
+		#endif
 		char* str = "TEXT TCP 1.0\n\n";
 		if(send(connfd, str, strlen(str), 0) < 0){
+			#ifdef DEBUG
 			printf("Could not send protocol msg\n");
+			#endif
 			close(connfd);
-		} else printf("Sent protocol msg\n");
+		} else {
+			#ifdef DEBUG
+			printf("Sent protocol msg\n");
+			#endif
+		}
 	}
 	
 	//Recv the OK from client
 	//recieveMessage(connfd, client_message, sizeof(client_message));
 
 	readSize = recv(connfd, &client_message, sizeof(client_message), 0);
-	if(readSize == 0){
+	if(readSize < 0){
+		#ifdef DEBUG
 		printf("Connection with socket died.\n");
+		#endif
+		close(connfd);
+		continue;
+	}
+	else if(readSize == 0){
+		#ifdef DEBUG
+		printf("Client timeout. Closing connection.\n");
+		#endif
 		close(connfd);
 		continue;
 	}
@@ -125,7 +184,9 @@ int main(int argc, char *argv[]){
   		#endif DEBUG
   	}
   	else{
+  		#ifdef DEBUG
   		printf("Wrong response. Closing connection...");
+  		#endif
   		close(connfd);
   		continue;
   	}
@@ -134,7 +195,6 @@ int main(int argc, char *argv[]){
 	//Calculate problem
 	char* op = (char*)malloc(1450);
 	op = randomType();
-	printf("Got randomtype: %s\n", op);
 	char* solution = (char*)malloc(1450);
 	if(strcmp("fadd", op) == 0){
 		fv1 = randomFloat();
@@ -144,17 +204,14 @@ int main(int argc, char *argv[]){
 		sprintf(solution, "%8.8g\n", fresult);
 	}
 	else if(strcmp("fsub", op) == 0){
-		printf("test\n");
 		fv1 = randomFloat();
 		fv2 = randomFloat();
 		fresult = fv1 - fv2;
 		sprintf(msg, "%s %8.8g %8.8g\n", op, fv1, fv2);
-		printf("sprintf worked\n");
 		sprintf(solution, "%8.8g\n", fresult);
 
 	}
 	else if(strcmp("fmul", op) == 0){
-		printf("test\n");
 		fv1 = randomFloat();
 		fv2 = randomFloat();
 		fresult = fv1 * fv2;
@@ -162,7 +219,6 @@ int main(int argc, char *argv[]){
 		sprintf(solution, "%8.8g\n", fresult);
 	}
 	else if(strcmp("fdiv", op) == 0){
-		printf("test\n");
 		fv1 = randomFloat();
 		fv2 = randomFloat();
 		fresult = fv1 / fv2;
@@ -197,26 +253,39 @@ int main(int argc, char *argv[]){
 		sprintf(msg, "%s %d %d\n", op, iv1, iv2);
 		sprintf(solution, "%d\n", iresult);
 	}
-	printf("Problem made: %s\n", msg);
-	printf("Solution made: %s\n", solution);
+	
 	//Send problem
 	if(send(connfd, msg, strlen(msg), 0) < 0){
+			#ifdef DEBUG
 			printf("Could not send problem msg\n");
+			#endif
 			close(connfd);
 			continue;
-	}else printf("Problem sent\n");
+	}else{
+		#ifdef DEBUG
+		printf("Problem sent\n");
+		#endif
+		printf("%s", msg);
+	}
 
 	//Recieve solution
 	readSize = recv(connfd, &client_message, sizeof(client_message), 0);
-	if(readSize == 0){
-		printf("Connection with socket died.\n");
+	if(readSize < 0){
 		close(connfd);
 		continue;
 	}
+	else if(readSize == 0){
+		#ifdef DEBUG
+		printf("Client timeout. Closing connection\n");
+		#endif
+		close(connfd);
+		continue;
+	}
+	
+	printf("%s", client_message);
 	client_message[readSize] = 0;
 	
 	//Compare solutions
-	printf("Answer: %s\n Solution:%s\n", client_message, solution);
 	if(op[0] == 'f'){
 		double x = fabs(atof(client_message) - atof(solution));
 		if(x < 0.0001){
@@ -232,10 +301,12 @@ int main(int argc, char *argv[]){
 	
 	//Send final response
 	if(send(connfd, solution, strlen(solution), 0) < 0){
+		#ifdef DEBUG
 		printf("Could not send final response msg\n");
+		#endif
 		close(connfd);
 		continue;
-	}else printf("Final response sent: %s\n", solution);
+	}else printf("%s\n", solution);
 	//Close connection
 	close(connfd);
 	
