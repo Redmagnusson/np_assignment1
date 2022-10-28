@@ -4,12 +4,13 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <netdb.h>
 #define SA struct sockaddr
 /* You will to add includes here */
 
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass CFLAGS=-DDEBUG to make, make CFLAGS=-DDEBUG
-#define DEBUG
+//#define DEBUG
 
 
 // Included to get the support library
@@ -66,7 +67,6 @@ void calculateMessage(char* server_message, int &socket_desc){
 		
 		char* str = (char*)malloc(1450);
 		sprintf(str, "%8.8g\n", fresult);
-		printf("This is the message thats failing: %s\n", str);
 		sendMessage(socket_desc, str, strlen(str));
 		return;
 		
@@ -90,7 +90,6 @@ void calculateMessage(char* server_message, int &socket_desc){
 		}
 		char* strResult = (char*)malloc(1450);
 		sprintf(strResult, "%d\n", iresult);
-		printf("This is the message thats failing\n");
 		sendMessage(socket_desc, strResult, strlen(strResult));
 		return;
 	}
@@ -98,14 +97,45 @@ void calculateMessage(char* server_message, int &socket_desc){
 
 }
 
+int CAP = 2000;
 int main(int argc, char *argv[]){
 
-  char delim[]=":";
-  char *Desthost=strtok(argv[1],delim);
-  char *Destport=strtok(NULL,delim);
-  struct sockaddr_in servaddr;
-  char server_message[2000], client_message[2000];
-  int port=atoi(Destport);
+
+	//Variables
+	char* splits[CAP];
+  char* p = strtok(argv[1], ":");
+  int delimCounter = 0;
+  char *Desthost;
+  char *Destport;
+  int port;
+	int serverfd;
+	struct sockaddr_in client;
+	char server_message[CAP];
+  //Get argv
+  while(p != NULL){
+  	//Look for the amount of ":" in argv to determine if ipv4 or ipv6
+  	splits[delimCounter++] = p;
+  	p = strtok(NULL, ":");
+  }
+  Destport = splits[--delimCounter];
+  Desthost = splits[0];
+  for(int i = 1;i<delimCounter;i++){
+  	
+  	sprintf(Desthost, "%s:%s",Desthost, splits[i]);
+  }
+  port=atoi(Destport);
+  printf("Host %s and port %d.\n",Desthost,port);
+	
+	//Getaddrinfo
+	struct addrinfo hints, *serverinfo = 0;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	
+	if(getaddrinfo(Desthost, Destport, &hints, &serverinfo) < 0){
+		printf("Getaddrinfo error: %s\n", strerror(errno)); 
+		exit(0);
+	} else printf("Getaddrinfo success\n");
   
   //Create TCP socket
   int socket_desc;
