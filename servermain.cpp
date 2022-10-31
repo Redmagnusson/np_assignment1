@@ -69,7 +69,7 @@ int main(int argc, char *argv[]){
   	sprintf(Desthost, "%s:%s",Desthost, splits[i]);
   }
   port=atoi(Destport);
-  printf("Host %s and port %d.\n",Desthost,port);
+
 	
 	//Getaddrinfo
 	struct addrinfo hints, *serverinfo = 0;
@@ -82,6 +82,10 @@ int main(int argc, char *argv[]){
 		exit(0);
 	} else printf("Getaddrinfo success\n");
 
+  printf("Host %s, port %d\n",Desthost,port);
+  
+  printf("IPV: %d\n", serverinfo->ai_family);
+  
 	//Create socket
   sockfd = socket(serverinfo->ai_family, serverinfo->ai_socktype, serverinfo->ai_protocol);
   if(sockfd == -1){
@@ -101,7 +105,7 @@ int main(int argc, char *argv[]){
   	.tv_sec = 5
   };
   setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  
+  setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   //Bind socket
   if((bind(sockfd, serverinfo->ai_addr, serverinfo->ai_addrlen)) < 0){
   	#ifdef DEBUG
@@ -137,7 +141,13 @@ int main(int argc, char *argv[]){
 	
 	if(connfd < 0){
 		#ifdef DEBUG
-		printf("Server accept failed. Closing connection.\n");
+		printf("Server accept timeout. Closing connection.\n");
+		#endif
+		close(connfd);
+	}
+	else if(connfd == 0){
+		#ifdef DEBUG
+		printf("Server accept timeout. Closing connection.\n");
 		#endif
 		close(connfd);
 	}
@@ -172,6 +182,7 @@ int main(int argc, char *argv[]){
 	else if(readSize == 0){
 		#ifdef DEBUG
 		printf("Client timeout. Closing connection.\n");
+		// ADD ERROR MESSAGE SEND HERE
 		#endif
 		close(connfd);
 		continue;
@@ -187,6 +198,7 @@ int main(int argc, char *argv[]){
   		#ifdef DEBUG
   		printf("Wrong response. Closing connection...");
   		#endif
+  		
   		close(connfd);
   		continue;
   	}
@@ -278,6 +290,7 @@ int main(int argc, char *argv[]){
 		#ifdef DEBUG
 		printf("Client timeout. Closing connection\n");
 		#endif
+		// ADD ERROR MESSAGE SEND HERE
 		close(connfd);
 		continue;
 	}
