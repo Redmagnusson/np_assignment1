@@ -18,7 +18,7 @@
 #define DEBUG
 // Enable if you want debugging to be printed, see examble below.
 // Alternative, pass CFLAGS=-DDEBUG to make, make CFLAGS=-DDEBUG
-//#define DEBUG
+#define DEBUG
 void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_size){
 
   //Clears the message array before recieving the server msg.
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]){
   struct timeval tv = {
   	.tv_sec = 5
   };
-  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)); //Not sure if TO is needed here
   setsockopt(connfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
   //Bind socket
   if((bind(sockfd, serverinfo->ai_addr, serverinfo->ai_addrlen)) < 0){
@@ -183,6 +183,9 @@ int main(int argc, char *argv[]){
 		#ifdef DEBUG
 		printf("Client timeout. Closing connection.\n");
 		// ADD ERROR MESSAGE SEND HERE
+		if(send(connfd, "ERROR TO\n", sizeof("ERROR TO\n"), 0) < 0){
+			printf("Failed to send message: %s\n", strerror(errno));
+		} else printf("Sent TO ERROR msg\n");
 		#endif
 		close(connfd);
 		continue;
@@ -195,9 +198,12 @@ int main(int argc, char *argv[]){
   		#endif DEBUG
   	}
   	else{
-  		#ifdef DEBUG
-  		printf("Wrong response. Closing connection...");
-  		#endif
+  		//#ifdef DEBUG
+  		//printf("Wrong response. Closing connection...");
+  		//#endif
+  		if(send(connfd, "ERROR\n", sizeof("ERROR\n"), 0) < 0){
+				printf("Failed to send message: %s\n", strerror(errno));
+			} else printf("Wrong response, sent ERROR msg\n");
   		
   		close(connfd);
   		continue;
@@ -291,6 +297,9 @@ int main(int argc, char *argv[]){
 		printf("Client timeout. Closing connection\n");
 		#endif
 		// ADD ERROR MESSAGE SEND HERE
+		if(send(connfd, "ERROR TO\n", sizeof("ERROR TO\n"), 0) < 0){
+			printf("Failed to send message: %s\n", strerror(errno));
+		} else printf("Sent TO ERROR msg\n");
 		close(connfd);
 		continue;
 	}
