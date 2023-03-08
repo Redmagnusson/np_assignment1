@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
+#include <unistd.h>
 #define SA struct sockaddr
 /* You will to add includes here */
 
@@ -191,6 +192,7 @@ int main(int argc, char *argv[]){
   }
   else return -1;
 
+	//sleep(6);
   //Recieve the problem
   recieveMessage(socket_desc, server_message, sizeof(server_message));
   

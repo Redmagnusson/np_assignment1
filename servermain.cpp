@@ -36,8 +36,8 @@ void recieveMessage(int &socket_desc, char* server_message, unsigned int msg_siz
 } 
 
 using namespace std;
-int CAP = 2000;
-int main(int argc, char *argv[]){
+	int CAP = 2000;
+	int main(int argc, char *argv[]){
   //Variables
 	char* splits[CAP];
   char* p = strtok(argv[1], ":");
@@ -289,6 +289,8 @@ int main(int argc, char *argv[]){
 	//Recieve solution
 	readSize = recv(connfd, &client_message, sizeof(client_message), 0);
 	if(readSize < 0){
+		// ADD ERROR MESSAGE SEND HERE
+		printf("Connection with socket died.\n");
 		close(connfd);
 		continue;
 	}
