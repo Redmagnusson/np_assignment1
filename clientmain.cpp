@@ -68,6 +68,7 @@ void calculateMessage(char* server_message, int &socket_desc){
 		
 		char* str = (char*)malloc(1450);
 		sprintf(str, "%8.8g\n", fresult);
+		//TODO UNCOMMENT THIS
 		sendMessage(socket_desc, str, strlen(str));
 		return;
 		
@@ -91,6 +92,7 @@ void calculateMessage(char* server_message, int &socket_desc){
 		}
 		char* strResult = (char*)malloc(1450);
 		sprintf(strResult, "%d\n", iresult);
+		//TODO UNCOMMENT THIS
 		sendMessage(socket_desc, strResult, strlen(strResult));
 		return;
 	}
@@ -181,6 +183,7 @@ int main(int argc, char *argv[]){
   recieveMessage(socket_desc, server_message, sizeof(server_message));
   
   //Compare strings to verify version
+
   if(strcmp(server_message,"TEXT TCP 1.0\n\n") == 0){
   	#ifdef DEBUG
   	printf("Same\n");
@@ -190,12 +193,22 @@ int main(int argc, char *argv[]){
   	//Send back the OK
   	sendMessage(socket_desc, str, strlen(str));
   }
-  else return -1;
+  else{
+	  printf("Closing connection\n");
+	  close(socket_desc);
+	  return -1;
+  }
 
 	//sleep(6);
   //Recieve the problem
+  printf("We are here\n");
   recieveMessage(socket_desc, server_message, sizeof(server_message));
   
+  if(strcmp(server_message, "ERROR TO\n") == 0){
+	  printf("We got TO'ed. Closing connection\n");
+	  close(socket_desc);
+	  return -1;
+  }
   //Translate Message
   calculateMessage(server_message, socket_desc);
   
@@ -204,7 +217,13 @@ int main(int argc, char *argv[]){
   
   //Recieve the final Message
   recieveMessage(socket_desc, server_message, sizeof(server_message));
-  
+  if(strcmp(server_message, "ERROR TO\n") == 0){
+	  printf("We got TO'ed. Closing connection\n");
+	  close(socket_desc);
+	  return -1;
+  }
   //Close socket and quit program
   //TODO
+  close(socket_desc);
+  return 0;
 }
